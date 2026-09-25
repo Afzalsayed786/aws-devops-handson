@@ -1,4 +1,4 @@
-name: Terraform EC2 Deployment
+name: Terraform + Ansible Deployment
 
 on:
   push:
@@ -6,12 +6,13 @@ on:
       - main
     paths:
       - "terraform/**"
+      - "ansible/**"
       - ".github/workflows/terraform.yml"
   workflow_dispatch:
 
 jobs:
-  terraform:
-    name: Terraform
+  deploy:
+    name: Provision EC2 and Deploy React App
     runs-on: ubuntu-latest
 
     defaults:
@@ -32,9 +33,6 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: eu-north-1
 
-      - name: Verify AWS Credentials
-        run: aws sts get-caller-identity
-
       - name: Terraform Init
         run: terraform init
 
@@ -49,3 +47,48 @@ jobs:
 
       - name: Terraform Apply
         run: terraform apply -auto-approve
+
+      - name: Get EC2 Public IP
+        id: ec2
+        run: echo "ip=$(terraform output -raw ec2_public_ip)" >> "$GITHUB_OUTPUT"
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/day9-key.pem
+          chmod 400 ~/.ssh/day9-key.pem
+          ssh-keyscan -H "${{ steps.ec2.outputs.ip }}" >> ~/.ssh/known_hosts
+
+      - name: Wait for SSH
+        run: |
+          for i in {1..12}; do
+            if ssh -i ~/.ssh/day9-key.pem \
+              -o StrictHostKeyChecking=no \
+              -o ConnectTimeout=5 \
+              ubuntu@${{ steps.ec2.outputs.ip }} "echo SSH Ready"; then
+              exit 0
+            fi
+            echo "Waiting for EC2 SSH..."
+            sleep 10
+          done
+          exit 1
+
+      - name: Install Ansible
+        working-directory: .
+        run: python3 -m pip install --user ansible
+
+      - name: Create Dynamic Ansible Inventory
+        working-directory: .
+        run: |
+          cat > ansible/ci-inventory.ini <<EOF
+          [web]
+          ${{ steps.ec2.outputs.ip }} ansible_user=ubuntu ansible_ssh_private_key_file=~/.ssh/day9-key.pem
+          EOF
+
+      - name: Test Ansible Connection
+        working-directory: .
+        run: ansible -i ansible/ci-inventory.ini web -m ping
+
+      - name: Run Ansible Playbook
+        working-directory: .
+        run: ansible-playbook -i ansible/ci-inventory.ini ansible/playbook.yml
