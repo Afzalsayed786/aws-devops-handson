@@ -1,0 +1,38 @@
+name: Ansible React Deployment
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths:
+      - "ansible/**"
+      - ".github/workflows/ansible.yml"
+
+jobs:
+  deploy:
+    name: Deploy React App with Ansible
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_PRIVATE_KEY }}" > ~/.ssh/day9-key.pem
+          chmod 400 ~/.ssh/day9-key.pem
+          ssh-keyscan -H 13.60.182.237 >> ~/.ssh/known_hosts
+
+      - name: Install Ansible
+        run: |
+          python3 -m pip install --user ansible
+
+      - name: Test Ansible Connection
+        run: |
+          ansible -i ansible/inventory.ini web -m ping
+
+      - name: Run Ansible Playbook
+        run: |
+          ansible-playbook -i ansible/inventory.ini ansible/playbook.yml

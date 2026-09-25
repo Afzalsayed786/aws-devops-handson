@@ -1,0 +1,42 @@
+---
+- name: Deploy React App
+  hosts: web
+  become: true
+
+  tasks:
+    - name: Update apt package list
+      apt:
+        update_cache: true
+
+    - name: Install Node.js, npm and Git
+      apt:
+        name:
+          - nodejs
+          - npm
+          - git
+        state: present
+
+    - name: Remove old application directory
+      file:
+        path: /home/ubuntu/aws-devops-handson
+        state: absent
+
+    - name: Clone React application
+      become_user: ubuntu
+      git:
+        repo: "https://github.com/Afzalsayed786/aws-devops-handson.git"
+        dest: /home/ubuntu/aws-devops-handson
+        version: main
+
+    - name: Install React application dependencies
+      become_user: ubuntu
+      npm:
+        path: /home/ubuntu/aws-devops-handson
+
+    - name: Start React application
+      become_user: ubuntu
+      shell: |
+        cd /home/ubuntu/aws-devops-handson
+        nohup npm start > /home/ubuntu/react-app.log 2>&1 &
+      args:
+        executable: /bin/bash
