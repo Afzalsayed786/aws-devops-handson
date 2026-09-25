@@ -5,11 +5,18 @@ terraform {
       version = "~> 6.0"
     }
   }
+
+  backend "s3" {
+    bucket = "aws-devops-handson-terraform-state-295028317770"
+    key    = "terraform.tfstate"
+    region = "eu-north-1"
+  }
 }
 
 provider "aws" {
   region = "eu-north-1"
 }
+
 resource "aws_security_group" "react_sg" {
   name        = "react-app-sg"
   description = "Allow SSH and React traffic"
@@ -37,6 +44,7 @@ resource "aws_security_group" "react_sg" {
     cidr_blocks = ["0.0.0.0/0"]
   }
 }
+
 resource "aws_instance" "react_server" {
   ami           = "ami-0769f265f707fecc8"
   instance_type = "t3.micro"
