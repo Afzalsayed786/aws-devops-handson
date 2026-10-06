@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: crecita-task9-service
+  namespace: crecita-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: crecita-task9
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 8000

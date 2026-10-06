@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crecita-task9
+  namespace: crecita-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crecita-task9
+  template:
+    metadata:
+      labels:
+        app: crecita-task9
+    spec:
+      containers:
+        - name: task9-server
+          image: python:3.12-alpine
+          command: ["python", "/app/server.py"]
+          ports:
+            - containerPort: 8000
+          volumeMounts:
+            - name: message
+              mountPath: /app/secret
+            - name: server
+              mountPath: /app/server.py
+              subPath: server.py
+      volumes:
+        - name: message
+          secret:
+            secretName: crecita-secret
+        - name: server
+          configMap:
+            name: task9-server
