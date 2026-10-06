@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: crecita-http-echo-service
+  namespace: crecita-ns
+spec:
+  type: ClusterIP
+  selector:
+    app: crecita-http-echo
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 5678

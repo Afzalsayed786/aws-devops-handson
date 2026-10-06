@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: crecita-http-echo
+  namespace: crecita-ns
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: crecita-http-echo
+  template:
+    metadata:
+      labels:
+        app: crecita-http-echo
+    spec:
+      containers:
+        - name: http-echo
+          image: hashicorp/http-echo
+          args:
+            - "-text=$(MESSAGE)"
+          env:
+            - name: MESSAGE
+              valueFrom:
+                secretKeyRef:
+                  name: crecita-secret
+                  key: message
+          ports:
+            - containerPort: 5678
